@@ -9,3 +9,4 @@ IMPROVEMENTS
 BUG FIXES
 
   BUG-54825. (LIVY-75) Temporary solution for LIVY-75 (Fail to start livy session in secure mode)
+  BUG-54826. (LIVY-84) Temporary solution for LIVY-84
