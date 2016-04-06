@@ -1,0 +1,11 @@
+Changes only in Hortonworks github and not in offical livy repo.
+
+INCOMPATIBLE CHANGES
+
+NEW FEATURES
+
+IMPROVEMENTS
+
+BUG FIXES
+
+  BUG-54825. (LIVY-75) Temporary solution for LIVY-75 (Fail to start livy session in secure mode)
