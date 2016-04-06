@@ -142,7 +142,7 @@ class ScalatraBootstrap extends LifeCycle with Logging {
             .execute().get()
         }
         response.getStatusCode match {
-          case HttpServletResponse.SC_OK => Future.successful(())
+          case HttpServletResponse.SC_OK | HttpServletResponse.SC_ACCEPTED => Future.successful(())
           case statusCode =>
             info("callback fail, " + response.getResponseBody)
             System.exit(1)
