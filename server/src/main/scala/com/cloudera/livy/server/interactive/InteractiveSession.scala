@@ -172,7 +172,7 @@ class InteractiveSession(
           Future {
             try {
               Utils.usingResource(new AsyncHttpClient()) { client =>
-                client.prepareDelete(url.get.toString).execute()
+                client.prepareDelete(url.get.toString).execute().get()
               }
               synchronized {
                 _state = SessionState.Dead()
