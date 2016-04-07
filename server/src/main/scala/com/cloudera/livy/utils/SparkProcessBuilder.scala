@@ -27,6 +27,11 @@ import com.cloudera.livy.util.LineBufferedProcess
 
 class SparkProcessBuilder(livyConf: LivyConf) extends Logging {
 
+  private val LIVY_SERVER_KERBEROS_PRINCIPAL =
+    LivyConf.Entry("livy.server.kerberos.principal", null)
+  private val LIVY_SERVER_KERBEROS_KEYTAB =
+    LivyConf.Entry("livy.server.kerberos.keytab", null)
+
   private[this] var _executable: String = livyConf.sparkSubmit()
   private[this] var _master: Option[String] = None
   private[this] var _deployMode: Option[String] = None
@@ -38,6 +43,8 @@ class SparkProcessBuilder(livyConf: LivyConf) extends Logging {
   private[this] val _conf = mutable.HashMap[String, String]()
   private[this] var _driverClassPath: ArrayBuffer[String] = ArrayBuffer()
   private[this] var _proxyUser: Option[String] = None
+  private[this] val _keytab: String = livyConf.get(LIVY_SERVER_KERBEROS_KEYTAB)
+  private[this] val _principal: String = livyConf.get(LIVY_SERVER_KERBEROS_PRINCIPAL)
 
   private[this] var _queue: Option[String] = None
   private[this] var _archives: ArrayBuffer[String] = ArrayBuffer()
@@ -203,8 +210,20 @@ class SparkProcessBuilder(livyConf: LivyConf) extends Logging {
   }
 
   def start(file: Option[String], args: Traversable[String]): LineBufferedProcess = {
-    var arguments = ArrayBuffer(_executable)
+    var arguments = ArrayBuffer[String]()
+    if (_keytab != null && _principal != null) {
+      arguments += "kinit"
+      arguments += _principal
+      arguments += "-k"
+      arguments += "-t"
+      arguments += _keytab
+      arguments += ";"
+    } else if (_keytab != null || _principal != null) {
+      throw new IllegalArgumentException("One of " + LIVY_SERVER_KERBEROS_PRINCIPAL.key + " and "
+      + LIVY_SERVER_KERBEROS_PRINCIPAL.key + " is empty, they must be set together")
+    }
 
+    arguments += _executable
     def addOpt(option: String, value: Option[String]): Unit = {
       value.foreach { v =>
         arguments += option
@@ -246,9 +265,8 @@ class SparkProcessBuilder(livyConf: LivyConf) extends Logging {
       .map("'" + _.replace("'", "\\'") + "'")
       .mkString(" ")
 
-    info(s"Running $argsString")
-
-    val pb = new ProcessBuilder(arguments.asJava)
+    val pb = new ProcessBuilder("sh", "-c", arguments.mkString(" "))
+    info(s"Running " + pb.command().asScala.mkString(" "))
     val env = pb.environment()
 
     for ((key, value) <- _env) {

@@ -8,6 +8,7 @@ IMPROVEMENTS
 
 BUG FIXES
 
+  BUG-55684. Run kinit before launching spark session
   BUG-55618. Timeout when deleting session
   BUG-55612. Callback status code can also be ACCEPTED (Regression issue of LIVY-88)
   BUG-54825. (LIVY-75) Temporary solution for LIVY-75 (Fail to start livy session in secure mode)
