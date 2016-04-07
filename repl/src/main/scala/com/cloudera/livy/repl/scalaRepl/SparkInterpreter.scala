@@ -27,12 +27,14 @@ import scala.util.{Failure, Success, Try}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.repl.SparkIMain
+import org.apache.spark.sql.SQLContext
 import org.json4s.{DefaultFormats, Extraction}
 import org.json4s.JsonAST._
 import org.json4s.JsonDSL._
 
 import com.cloudera.livy.repl
 import com.cloudera.livy.repl.Interpreter
+import com.cloudera.livy.Logging
 
 object SparkInterpreter {
   private val MAGIC_REGEX = "^%(\\w+)\\W*(.*)".r
@@ -43,7 +45,7 @@ object SparkInterpreter {
 /**
  * This represents a Spark interpreter. It is not thread safe.
  */
-class SparkInterpreter extends Interpreter {
+class SparkInterpreter extends Interpreter with Logging {
   import SparkInterpreter._
 
   private implicit def formats = DefaultFormats
@@ -51,6 +53,7 @@ class SparkInterpreter extends Interpreter {
   private val outputStream = new ByteArrayOutputStream()
   private var sparkIMain: SparkIMain = _
   private var sparkContext: SparkContext = _
+  private var sqlContext: SQLContext = _
 
   def kind: String = "spark"
 
@@ -82,9 +85,25 @@ class SparkInterpreter extends Interpreter {
     }
 
     sparkContext = SparkContext.getOrCreate(sparkConf)
+    var sqlContextClassName = "org.apache.spark.sql.SQLContext"
+    try {
+      val loader = Option(Thread.currentThread().getContextClassLoader)
+        .getOrElse(getClass.getClassLoader)
+      val sqlContextClassName = "org.apache.spark.sql.hive.HiveContext"
+      sqlContext = loader.loadClass(sqlContextClassName).getConstructor(classOf[SparkContext])
+        .newInstance(sparkContext).asInstanceOf[SQLContext]
+      info("Created sql context (with Hive support)..")
+    } catch {
+      case _: java.lang.ClassNotFoundException | _: java.lang.NoClassDefFoundError =>
+        sqlContext = new SQLContext(sparkContext)
+        info("Created sql context..")
+    }
 
     sparkIMain.beQuietDuring {
       sparkIMain.bind("sc", "org.apache.spark.SparkContext", sparkContext, List("""@transient"""))
+    }
+    sparkIMain.beQuietDuring {
+      sparkIMain.bind("sqlContext", sqlContextClassName, sqlContext, List("""@transient"""))
     }
   }
 

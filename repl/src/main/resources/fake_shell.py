@@ -392,6 +392,7 @@ def main():
         if os.environ.get("livy.test") != "true":
             # Load spark into the context
             exec 'from pyspark.shell import sc' in global_dict
+            exec 'from pyspark.shell import sqlContext' in global_dict
 
         print >> sys_stderr, fake_stdout.getvalue()
         print >> sys_stderr, fake_stderr.getvalue()

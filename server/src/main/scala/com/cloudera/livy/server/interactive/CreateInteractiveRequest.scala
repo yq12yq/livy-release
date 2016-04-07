@@ -22,6 +22,7 @@ import com.cloudera.livy.sessions.Kind
 
 class CreateInteractiveRequest {
 
+  var master: Option[String] = _
   var kind: Kind = _
   var proxyUser: Option[String] = None
   var jars: List[String] = List()

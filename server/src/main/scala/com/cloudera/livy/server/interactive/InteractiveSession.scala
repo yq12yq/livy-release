@@ -75,6 +75,7 @@ class InteractiveSession(
     val builder = new SparkProcessBuilder(livyConf)
     builder.className("com.cloudera.livy.repl.Main")
     builder.conf(request.conf)
+    request.master.foreach(builder.master)
     request.archives.foreach(builder.archive)
     request.driverCores.foreach(builder.driverCores)
     request.driverMemory.foreach(builder.driverMemory)

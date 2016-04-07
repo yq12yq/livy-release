@@ -18,6 +18,8 @@
 
 package com.cloudera.livy.utils
 
+import java.io.File
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -61,6 +63,30 @@ class SparkProcessBuilder(livyConf: LivyConf) extends Logging {
 
   def master(masterUrl: String): SparkProcessBuilder = {
     _master = Some(masterUrl)
+    if (masterUrl == "yarn-cluster") {
+      // add hive-site and datanuclear jars
+      val sparkHome = livyConf.sparkHome().get
+      val hiveSiteFile = new File(sparkHome + "/conf/hive-site.xml")
+      if (hiveSiteFile.isFile) {
+        _files += hiveSiteFile.getAbsolutePath
+      } else {
+        warn("File hive-site.xml doesn't exist, path=" + hiveSiteFile.getAbsolutePath)
+      }
+      var libdir: File = null
+      if (new File(sparkHome, "RELEASE").isFile) {
+        libdir = new File(sparkHome, "lib")
+      }
+      else {
+        libdir = new File(sparkHome, "lib_managed/jars")
+      }
+
+      if (libdir.isDirectory()) {
+        _jars ++= libdir.listFiles().filter(_.getName.startsWith("datanucleus-"))
+          .map(_.getAbsolutePath)
+      } else {
+        warn("libdir of datanucleus jars doesn't exist")
+      }
+    }
     this
   }
 
