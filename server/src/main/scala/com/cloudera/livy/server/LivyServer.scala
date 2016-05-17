@@ -19,12 +19,14 @@
 package com.cloudera.livy.server
 
 import java.io.{File, IOException}
-import java.net.InetAddress
 import java.util.EnumSet
+import java.util.concurrent.{ScheduledThreadPoolExecutor, TimeUnit}
 import javax.servlet._
 
+import org.apache.commons.io.IOUtils
+import org.apache.commons.lang.StringUtils
+import org.apache.hadoop.security.{SecurityUtil, UserGroupInformation}
 import org.apache.hadoop.security.authentication.server._
-import org.apache.hadoop.security.SecurityUtil
 import org.eclipse.jetty.servlet.FilterHolder
 import org.scalatra.metrics.MetricsBootstrap
 import org.scalatra.metrics.MetricsSupportExtensions._
@@ -35,19 +37,30 @@ import com.cloudera.livy.server.batch.BatchSessionServlet
 import com.cloudera.livy.server.interactive.InteractiveSessionServlet
 import com.cloudera.livy.util.LineBufferedProcess
 
+
 class LivyServer extends Logging {
 
   private val ENVIRONMENT = LivyConf.Entry("livy.environment", "production")
   private val SERVER_HOST = LivyConf.Entry("livy.server.host", "0.0.0.0")
   private val SERVER_PORT = LivyConf.Entry("livy.server.port", 8998)
-  private val AUTH_TYPE = LivyConf.Entry("livy.server.auth.type", null)
-  private val KERBEROS_PRINCIPAL = LivyConf.Entry("livy.server.auth.kerberos.principal", null)
-  private val KERBEROS_KEYTAB = LivyConf.Entry("livy.server.auth.kerberos.keytab", null)
-  private val KERBEROS_NAME_RULES = LivyConf.Entry("livy.server.auth.kerberos.name_rules",
+  private val AUTH_KERBEROS_PRINCIPAL = LivyConf.Entry("livy.server.auth.kerberos.principal", null)
+  private val AUTH_KERBEROS_KEYTAB = LivyConf.Entry("livy.server.auth.kerberos.keytab", null)
+  private val AUTH_KERBEROS_NAME_RULES = LivyConf.Entry("livy.server.auth.kerberos.name_rules",
     "DEFAULT")
+  private val AUTH_TYPE = LivyConf.Entry("livy.server.auth.type", null)
+
+  private val LAUNCH_KERBEROS_PRINCIPAL =
+    LivyConf.Entry("livy.server.kerberos.principal", null)
+  private val LAUNCH_KERBEROS_KEYTAB =
+    LivyConf.Entry("livy.server.kerberos.keytab", null)
+  private val LAUNCH_KERBEROS_REFRESH_INTERVAL =
+    LivyConf.Entry("livy.server.kerberos.refresh_interval_seconds", 3600)
+  private val KINIT_FAIL_THRESHOLD =
+      LivyConf.Entry("livy.server.kerberos.kinit_fail_threshold", 5)
 
   private var server: WebServer = _
   private var _serverUrl: Option[String] = None
+  private var kinitFailCount: Int = 0
 
   def start(): Unit = {
     val livyConf = new LivyConf().loadFromFile("livy.conf")
@@ -94,26 +107,37 @@ class LivyServer extends Logging {
 
     livyConf.get(AUTH_TYPE) match {
       case authType @ KerberosAuthenticationHandler.TYPE =>
-        val principal = SecurityUtil.getServerPrincipal(livyConf.get(KERBEROS_PRINCIPAL),
+        val principal = SecurityUtil.getServerPrincipal(livyConf.get(AUTH_KERBEROS_PRINCIPAL),
           server.host)
-        val keytab = livyConf.get(KERBEROS_KEYTAB)
+        val keytab = livyConf.get(AUTH_KERBEROS_KEYTAB)
         require(principal != null,
-          s"Kerberos auth requires ${KERBEROS_PRINCIPAL.key} to be provided.")
+          s"Kerberos auth requires ${AUTH_KERBEROS_PRINCIPAL.key} to be provided.")
         require(keytab != null,
-          s"Kerberos auth requires ${KERBEROS_KEYTAB.key} to be provided.")
+          s"Kerberos auth requires ${AUTH_KERBEROS_KEYTAB.key} to be provided.")
 
         val holder = new FilterHolder(new AuthenticationFilter())
         holder.setInitParameter(AuthenticationFilter.AUTH_TYPE, authType)
         holder.setInitParameter(KerberosAuthenticationHandler.PRINCIPAL, principal)
         holder.setInitParameter(KerberosAuthenticationHandler.KEYTAB, keytab)
         holder.setInitParameter(KerberosAuthenticationHandler.NAME_RULES,
-          livyConf.get(KERBEROS_NAME_RULES))
+          livyConf.get(AUTH_KERBEROS_NAME_RULES))
         server.context.addFilter(holder, "/*", EnumSet.allOf(classOf[DispatcherType]))
         info(s"SPNEGO auth enabled (principal = $principal)")
         if (!livyConf.getBoolean(LivyConf.IMPERSONATION_ENABLED)) {
           info(s"Enabling impersonation since auth type is $authType.")
           livyConf.set(LivyConf.IMPERSONATION_ENABLED, true)
         }
+
+        // run kinit periodically
+        val executor = new ScheduledThreadPoolExecutor(1)
+        runKinit(livyConf)
+        executor.scheduleAtFixedRate(
+          new Runnable() {
+            def run(): Unit = runKinit(livyConf)
+          },
+          livyConf.getInt(LAUNCH_KERBEROS_REFRESH_INTERVAL),
+          livyConf.getInt(LAUNCH_KERBEROS_REFRESH_INTERVAL),
+          TimeUnit.SECONDS)
 
       case null =>
         // Nothing to do.
@@ -133,6 +157,39 @@ class LivyServer extends Logging {
 
     _serverUrl = Some(s"http://${server.host}:${server.port}")
     sys.props("livy.server.serverUrl") = _serverUrl.get
+  }
+
+  def runKinit(livyConf: LivyConf): Unit = {
+    val keytab = livyConf.get(LAUNCH_KERBEROS_KEYTAB)
+    val principal = livyConf.get(LAUNCH_KERBEROS_PRINCIPAL)
+    require(principal != null,
+      s"Kerberos requires ${LAUNCH_KERBEROS_KEYTAB.key} to be provided.")
+    require(keytab != null,
+      s"Kerberos requires ${LAUNCH_KERBEROS_PRINCIPAL.key} to be provided.")
+    val commands = Seq("kinit", "-kt", keytab, principal)
+    val proc = new ProcessBuilder(commands: _*).inheritIO().start()
+    proc.waitFor() match {
+      case 0 =>
+        debug("Ran kinit command successfully.")
+        kinitFailCount = 0
+        UserGroupInformation.getCurrentUser.reloginFromTicketCache()
+      case _ =>
+        warn("Fail to run kinit command.")
+        kinitFailCount += 1
+        val kinitFailThreshold = livyConf.getInt(KINIT_FAIL_THRESHOLD)
+        if (kinitFailCount >= kinitFailThreshold) {
+          error(s"Exit LivyServer after ${kinitFailThreshold} times failures running kinit.")
+          if (server.server.getState == "STARTED") {
+            stop()
+          } else {
+            sys.exit(1)
+          }
+        } else {
+          // retry after 5 seconds
+          Thread.sleep(5*1000)
+          runKinit(livyConf)
+        }
+    }
   }
 
   def join(): Unit = server.join()
