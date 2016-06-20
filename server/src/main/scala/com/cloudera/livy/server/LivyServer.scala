@@ -161,7 +161,8 @@ class LivyServer extends Logging {
 
   def runKinit(livyConf: LivyConf): Unit = {
     val keytab = livyConf.get(LAUNCH_KERBEROS_KEYTAB)
-    val principal = livyConf.get(LAUNCH_KERBEROS_PRINCIPAL)
+    val principal = SecurityUtil.getServerPrincipal(livyConf.get(LAUNCH_KERBEROS_PRINCIPAL),
+      server.host)
     require(principal != null,
       s"Kerberos requires ${LAUNCH_KERBEROS_KEYTAB.key} to be provided.")
     require(keytab != null,
