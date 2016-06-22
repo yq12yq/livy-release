@@ -57,6 +57,7 @@ class LivyServer extends Logging {
     LivyConf.Entry("livy.server.kerberos.refresh_interval_seconds", 3600)
   private val KINIT_FAIL_THRESHOLD =
       LivyConf.Entry("livy.server.kerberos.kinit_fail_threshold", 5)
+  private val CSRF_PROTECTION = LivyConf.Entry("livy.server.csrf_protection.enabled", false)
 
   private var server: WebServer = _
   private var _serverUrl: Option[String] = None
@@ -144,6 +145,12 @@ class LivyServer extends Logging {
 
       case other =>
         throw new IllegalArgumentException(s"Invalid auth type: $other")
+    }
+
+    if (livyConf.getBoolean(CSRF_PROTECTION)) {
+      info("CSRF protection is enabled.")
+      val csrfHolder = new FilterHolder(new CsrfFilter())
+      server.context.addFilter(csrfHolder, "/*", EnumSet.allOf(classOf[DispatcherType]))
     }
 
     server.start()
