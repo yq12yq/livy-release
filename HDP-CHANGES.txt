@@ -1,0 +1,12 @@
+Changes only in Hortonworks github and not in livy release 0.2.0
+
+INCOMPATIBLE CHANGES
+
+NEW FEATURES
+
+IMPROVEMENTS
+
+  LIVY-174. CSRF protection in livy rest api
+  LIVY-139. Livy server needs notification when remote session dies 
+  LIVY-94. SQLContext/HiveContext is not available in Interpreter
+  LIVY-98. Run kinit thread periodly in secure mode
