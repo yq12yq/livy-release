@@ -115,7 +115,7 @@ class SessionManager[S <: Session](val livyConf: LivyConf) extends Logging {
             s.stop()
           }
         } catch {
-          case e: NumberFormatException => // ignore non-yarn apps
+          case e: IllegalArgumentException => // ignore non-yarn apps
         }
       })
   }
