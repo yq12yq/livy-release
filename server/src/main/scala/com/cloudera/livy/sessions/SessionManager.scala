@@ -25,9 +25,9 @@ import scala.collection.mutable
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 
-import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.yarn.api.records.YarnApplicationState
 import org.apache.hadoop.yarn.client.api.YarnClient
+import org.apache.hadoop.yarn.conf.YarnConfiguration
 import org.apache.hadoop.yarn.util.ConverterUtils
 
 import com.cloudera.livy.{LivyConf, Logging}
@@ -48,7 +48,7 @@ class SessionManager[S <: Session](val livyConf: LivyConf) extends Logging {
     TimeUnit.MILLISECONDS.toNanos(livyConf.getTimeAsMs(SessionManager.SESSION_TIMEOUT))
 
   private val yarnClient = YarnClient.createYarnClient()
-  yarnClient.init(new Configuration())
+  yarnClient.init(new YarnConfiguration())
   yarnClient.start()
 
   new GarbageCollector().start()
