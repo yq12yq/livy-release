@@ -178,11 +178,14 @@
     <module>assembly</module>
     <module>client-common</module>
     <module>client-http</module>
+    <module>scala</module>
+    <module>core</module>
     <module>core/scala-2.10</module>
     <module>core/scala-2.11</module>
     <module>coverage</module>
     <module>examples</module>
     <module>python-api</module>
+    <module>repl</module>
     <module>repl/scala-2.10</module>
     <module>repl/scala-2.11</module>
     <module>rsc</module>
