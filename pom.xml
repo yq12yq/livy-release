@@ -185,7 +185,6 @@
     <module>coverage</module>
     <module>examples</module>
     <module>python-api</module>
-    <module>repl</module>
     <module>repl/scala-2.10</module>
     <module>repl/scala-2.11</module>
     <module>rsc</module>
@@ -978,6 +977,18 @@
   </distributionManagement>
 
   <profiles>
+    <profile>
+      <id>livy-repl</id>
+        <activation>
+          <property>
+            <name>repl</name>
+          </property>
+        </activation>
+        <modules>
+          <module>repl</module>
+        </modules>
+    </profile>
+
     <!-- Spark version profile -->
     <profile>
       <id>spark-1.6</id>
