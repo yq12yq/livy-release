@@ -33,5 +33,6 @@
   <properties>
     <scala.version>${scala-2.11.version}</scala.version>
     <scala.binary.version>2.11</scala.binary.version>
+    <spark.version>2.0.1.2.6.0.0-SNAPSHOT</spark.version>
   </properties>
 </project>
