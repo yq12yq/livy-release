@@ -1012,6 +1012,18 @@
         <spark.version>1.6.3.2.6.0.0-SNAPSHOT</spark.version>
       </properties>
     </profile>
+
+    <profile>
+      <id>spark-2.1</id>
+      <activation>
+        <property>
+          <name>spark-2.1</name>
+        </property>
+      </activation>
+      <properties>
+        <spark.version>1.6.3.2.6.0.0-SNAPSHOT</spark.version>
+      </properties>
+    </profile>
   </profiles>
 
 </project>
