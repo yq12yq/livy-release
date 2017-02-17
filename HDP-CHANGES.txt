@@ -1,4 +1,5 @@
 Changes only in Hortonworks github and not in Livy 0.3.0.
 
 BUG FIXES
+  LIVY-315. 	Fixed SparkRInterpreter to respect config enableHiveContext
   LIVY-308.     Avoid enabling Hive by default in Spark2.
