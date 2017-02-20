@@ -178,21 +178,23 @@
     <module>assembly</module>
     <module>client-common</module>
     <module>client-http</module>
-    <module>scala</module>
     <module>core</module>
     <module>core/scala-2.10</module>
     <module>core/scala-2.11</module>
     <module>coverage</module>
     <module>examples</module>
     <module>python-api</module>
+    <module>repl</module>
     <module>repl/scala-2.10</module>
     <module>repl/scala-2.11</module>
     <module>rsc</module>
+    <module>scala</module>
     <module>scala-api</module>
     <module>scala-api/scala-2.10</module>
     <module>scala-api/scala-2.11</module>
     <module>server</module>
     <module>test-lib</module>
+    <module>integration-test/minicluster-dependencies</module>
     <module>integration-test/minicluster-dependencies/scala-2.10</module>
     <module>integration-test/minicluster-dependencies/scala-2.11</module>
     <module>integration-test</module>
@@ -623,6 +625,13 @@
                 <goal>testCompile</goal>
               </goals>
             </execution>
+            <execution>
+              <id>scala-compile-first</id>
+              <phase>process-resources</phase>
+              <goals>
+                <goal>compile</goal>
+              </goals>
+            </execution>
           </executions>
           <configuration>
             <scalaVersion>${scala.version}</scalaVersion>
@@ -790,11 +799,6 @@
       </plugin>
 
       <plugin>
-        <groupId>net.alchim31.maven</groupId>
-        <artifactId>scala-maven-plugin</artifactId>
-      </plugin>
-
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
@@ -927,11 +931,6 @@
       </plugin>
 
       <plugin>
-        <groupId>org.scalatest</groupId>
-        <artifactId>scalatest-maven-plugin</artifactId>
-      </plugin>
-
-      <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
         <version>0.7.7.201606060606</version>
@@ -975,19 +974,6 @@
   </distributionManagement>
 
   <profiles>
-    <profile>
-      <id>livy-repl</id>
-        <activation>
-          <property>
-            <name>repl</name>
-          </property>
-        </activation>
-        <modules>
-          <module>repl</module>
-          <module>integration-test/minicluster-dependencies</module>
-        </modules>
-    </profile>
-
     <!-- Spark version profile -->
     <profile>
       <id>spark-1.6</id>
@@ -1024,6 +1010,28 @@
         <spark.version>1.6.3.2.6.2.0-SNAPSHOT</spark.version>
       </properties>
     </profile>
+
+    <profile>
+      <id>skip-parent-modules</id>
+      <activation>
+        <file>
+          <missing>src/main/resources/build.marker</missing>
+        </file>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.scalatest</groupId>
+            <artifactId>scalatest-maven-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>net.alchim31.maven</groupId>
+            <artifactId>scala-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
   </profiles>
 
 </project>
