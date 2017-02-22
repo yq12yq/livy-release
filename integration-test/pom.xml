@@ -289,6 +289,7 @@
             <LIVY_HOME>${execution.root}</LIVY_HOME>
             <LIVY_TEST>false</LIVY_TEST>
             <LIVY_INTEGRATION_TEST>true</LIVY_INTEGRATION_TEST>
+            <HDP_VERSION>2.6.0.0</HDP_VERSION>
           </environmentVariables>
           <systemProperties>
             <cluster.spec>${cluster.spec}</cluster.spec>
