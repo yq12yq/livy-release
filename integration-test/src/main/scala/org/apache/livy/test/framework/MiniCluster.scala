@@ -154,9 +154,7 @@ object MiniLivyMain extends MiniClusterBase {
       LivyConf.RECOVERY_STATE_STORE.key -> "filesystem",
       LivyConf.RECOVERY_STATE_STORE_URL.key -> s"file://$configPath/state-store")
 
-    if (Cluster.isRunningOnTravis) {
-      livyConf ++= Map("livy.server.yarn.app-lookup-timeout" -> "2m")
-    }
+    livyConf ++= Map("livy.server.yarn.app-lookup-timeout" -> "2m")
 
     saveProperties(livyConf, new File(configPath + "/livy.conf"))
 

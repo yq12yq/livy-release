@@ -94,7 +94,7 @@ class LivyRestClient(val httpClient: AsyncHttpClient, val livyEndpoint: String) 
     }
 
     def verifySessionState(states: Set[SessionState]): Unit = {
-      val t = if (Cluster.isRunningOnTravis) 5.minutes else 2.minutes
+      val t = 5.minutes
       val strStates = states.map(_.toString)
       // Travis uses very slow VM. It needs a longer timeout.
       // Keeping the original timeout to avoid slowing down local development.
