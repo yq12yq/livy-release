@@ -4,3 +4,4 @@ BUG FIXES
   LIVY-315. 	Fixed SparkRInterpreter to respect config enableHiveContext
   LIVY-308.     Avoid enabling Hive by default in Spark2.
   BUG-73763     Fix unit test failure for in house build.
+  BUG-73766     Increase the timeout to fix InteractiveIT and JobApiT UT fails with TimeoutException
