@@ -10,3 +10,4 @@ BUG FIXES
   BUG-73763     Increase the test timeout of ReplDriverSuite.start a repl session using rsc
   LIVY-329      Fix two SSL issues.
   LIVY-358      Make JettyServer Http request and response header size configurable
+  LIVY-358      [Follow-up] Add unit test to verify header size configurations
