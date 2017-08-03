@@ -33,11 +33,6 @@
     </license>
   </licenses>
 
-  <organization>
-    <name>Cloudera Inc</name>
-    <url>http://www.cloudera.com</url>
-  </organization>
-
   <properties>
     <hadoop.version>2.7.3.2.6.2.0-SNAPSHOT</hadoop.version>
     <hadoop.scope>compile</hadoop.scope>
