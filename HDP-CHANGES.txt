@@ -1,13 +1,6 @@
-Changes only in Hortonworks github and not in Livy 0.3.0.
+Changes only in Hortonworks github and not in Livy 0.4.0.
 
 BUG FIXES
-  LIVY-315. 	Fixed SparkRInterpreter to respect config enableHiveContext
-  LIVY-308.     Avoid enabling Hive by default in Spark2.
-  LIVY-310.     Kinit should be called before doing recovery check.
-  LIVY-316.     NPE when starting kinit thread
   BUG-73763     Fix unit test failure for in house build.
   BUG-73766     Increase the timeout to fix InteractiveIT and JobApiT UT fails with TimeoutException
   BUG-73763     Increase the test timeout of ReplDriverSuite.start a repl session using rsc
-  LIVY-329      Fix two SSL issues.
-  LIVY-358      Make JettyServer Http request and response header size configurable
-  LIVY-358      [Follow-up] Add unit test to verify header size configurations
