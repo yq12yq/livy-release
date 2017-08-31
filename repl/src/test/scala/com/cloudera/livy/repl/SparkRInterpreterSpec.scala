@@ -19,9 +19,11 @@
 package com.cloudera.livy.repl
 
 import org.apache.spark.SparkConf
-import org.json4s.{DefaultFormats, JValue}
+import org.json4s.DefaultFormats
 import org.json4s.JsonDSL._
 import org.scalatest._
+
+import com.cloudera.livy.rsc.driver.SparkEntries
 
 class SparkRInterpreterSpec extends BaseInterpreterSpec {
 
@@ -32,7 +34,11 @@ class SparkRInterpreterSpec extends BaseInterpreterSpec {
     super.withFixture(test)
   }
 
-  override def createInterpreter(): Interpreter = SparkRInterpreter(new SparkConf())
+
+  override def createInterpreter(): Interpreter = {
+    val sparkConf = new SparkConf()
+    SparkRInterpreter(sparkConf, new SparkEntries(sparkConf))
+  }
 
   it should "execute `1 + 2` == 3" in withInterpreter { interpreter =>
     val response = interpreter.execute("1 + 2")
@@ -81,11 +87,14 @@ class SparkRInterpreterSpec extends BaseInterpreterSpec {
 
   it should "report an error if accessing an unknown variable" in withInterpreter { interpreter =>
     val response = interpreter.execute("x")
-    response should equal(Interpreter.ExecuteSuccess(
-      TEXT_PLAIN -> "Error in eval(expr, envir, enclos) : object 'x' not found"
-    ))
+    // This is fixed in LIVY-313
+    response match {
+      case Interpreter.ExecuteSuccess(content) =>
+        assert((content.toString.contains("object 'x' not found")))
+      case _ =>
+        fail("This release does not contain the fix in LIVY-313 and should always return ExecuteSuccess")
+    }
   }
-
 
   it should "not hang when executing incomplete statements" in withInterpreter { interpreter =>
     val response = interpreter.execute("x[")

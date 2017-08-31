@@ -25,6 +25,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
+import org.apache.spark.SparkConf
 import org.json4s._
 import org.scalatest.{FlatSpec, Matchers}
 import org.scalatest.concurrent.Eventually._
@@ -32,13 +33,16 @@ import org.scalatest.concurrent.Eventually._
 import com.cloudera.livy.LivyBaseUnitTestSuite
 import com.cloudera.livy.rsc.RSCConf
 import com.cloudera.livy.rsc.driver.{Statement, StatementState}
-import com.cloudera.livy.sessions.SessionState
+import com.cloudera.livy.sessions._
 
-abstract class BaseSessionSpec extends FlatSpec with Matchers with LivyBaseUnitTestSuite {
+abstract class BaseSessionSpec(kind: Kind)
+    extends FlatSpec with Matchers with LivyBaseUnitTestSuite {
 
   implicit val formats = DefaultFormats
 
-  private val rscConf = new RSCConf(new Properties())
+  private val rscConf = new RSCConf(new Properties()).set(RSCConf.Entry.SESSION_KIND, kind.toString)
+
+  private val sparkConf = new SparkConf()
 
   protected def execute(session: Session)(code: String): Statement = {
     val id = session.execute(code)
@@ -52,7 +56,7 @@ abstract class BaseSessionSpec extends FlatSpec with Matchers with LivyBaseUnitT
   protected def withSession(testCode: Session => Any): Unit = {
     val stateChangedCalled = new AtomicInteger()
     val session =
-      new Session(rscConf, createInterpreter(), { _ => stateChangedCalled.incrementAndGet() })
+      new Session(rscConf, sparkConf, None, { _ => stateChangedCalled.incrementAndGet() })
     try {
       // Session's constructor should fire an initial state change event.
       stateChangedCalled.intValue() shouldBe 1
@@ -66,16 +70,12 @@ abstract class BaseSessionSpec extends FlatSpec with Matchers with LivyBaseUnitT
     }
   }
 
-  protected def createInterpreter(): Interpreter
-
   it should "start in the starting or idle state" in {
-    val session = new Session(rscConf, createInterpreter())
+    val session = new Session(rscConf, sparkConf)
     val future = session.start()
     try {
-      eventually(timeout(30 seconds), interval(100 millis)) {
-        session.state should (equal (SessionState.Starting()) or equal (SessionState.Idle()))
-      }
       Await.ready(future, 60 seconds)
+      session.state should (equal (SessionState.Starting()) or equal (SessionState.Idle()))
     } finally {
       session.close()
     }

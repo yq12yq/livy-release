@@ -23,6 +23,7 @@ import org.json4s.{DefaultFormats, JValue, JNull}
 import org.json4s.JsonDSL._
 import org.scalatest._
 
+import com.cloudera.livy.rsc.driver.SparkEntries
 import com.cloudera.livy.sessions._
 
 abstract class PythonBaseInterpreterSpec extends BaseInterpreterSpec {
@@ -244,7 +245,10 @@ class Python2InterpreterSpec extends PythonBaseInterpreterSpec {
 
   implicit val formats = DefaultFormats
 
-  override def createInterpreter(): Interpreter = PythonInterpreter(new SparkConf(), PySpark())
+  override def createInterpreter(): Interpreter = {
+    val sparkConf = new SparkConf()
+    PythonInterpreter(sparkConf, new SparkEntries(sparkConf))
+  }
 
   // Scalastyle is treating unicode escape as non ascii characters. Turn off the check.
   // scalastyle:off non.ascii.character.disallowed
@@ -262,7 +266,7 @@ class Python2InterpreterSpec extends PythonBaseInterpreterSpec {
   // scalastyle:on non.ascii.character.disallowed
 }
 
-class Python3InterpreterSpec extends PythonBaseInterpreterSpec {
+class Python3InterpreterSpec extends PythonBaseInterpreterSpec with BeforeAndAfterAll {
 
   implicit val formats = DefaultFormats
 
@@ -271,7 +275,20 @@ class Python3InterpreterSpec extends PythonBaseInterpreterSpec {
     test()
   }
 
-  override def createInterpreter(): Interpreter = PythonInterpreter(new SparkConf(), PySpark3())
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    sys.props.put("pyspark.python", "python3")
+  }
+
+  override def afterAll(): Unit = {
+    sys.props.remove("pyspark.python")
+    super.afterAll()
+  }
+
+  override def createInterpreter(): Interpreter = {
+    val sparkConf = new SparkConf()
+    PythonInterpreter(sparkConf, new SparkEntries(sparkConf))
+  }
 
   it should "check python version is 3.x" in withInterpreter { interpreter =>
     val response = interpreter.execute("""import sys

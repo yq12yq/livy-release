@@ -18,18 +18,17 @@
 
 package com.cloudera.livy.repl
 
-import org.apache.spark.SparkConf
 import org.json4s.Extraction
 import org.json4s.jackson.JsonMethods.parse
 
-class SparkRSessionSpec extends BaseSessionSpec {
+import com.cloudera.livy.sessions._
+
+class SparkRSessionSpec extends BaseSessionSpec(SparkR()) {
 
   override protected def withFixture(test: NoArgTest) = {
     assume(!sys.props.getOrElse("skipRTests", "false").toBoolean, "Skipping R tests.")
     super.withFixture(test)
   }
-
-  override def createInterpreter(): Interpreter = SparkRInterpreter(new SparkConf())
 
   it should "execute `1 + 2` == 3" in withSession { session =>
     val statement = execute(session)("1 + 2")
@@ -129,15 +128,9 @@ class SparkRSessionSpec extends BaseSessionSpec {
     statement.id should equal (0)
 
     val result = parse(statement.output)
-    val expectedResult = Extraction.decompose(Map(
-      "status" -> "ok",
-      "execution_count" -> 0,
-      "data" -> Map(
-        "text/plain" -> "Error in eval(expr, envir, enclos) : object 'x' not found"
-      )
-    ))
-
-    result should equal (expectedResult)
+    (result \ "status").extract[String] should be ("ok") // This is fixed in LIVY-313
+    (result \ "execution_count").extract[Int] should be (0)
+    assert((result \ "data").toString.contains("object 'x' not found"))
   }
 
 }

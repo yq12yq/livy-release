@@ -119,7 +119,7 @@ class InteractiveSessionServletSpec extends BaseInteractiveServletSpec {
       batch should be (defined)
     }
 
-    jpost[Map[String, Any]]("/0/statements", ExecuteRequest("foo")) { data =>
+    jpost[Map[String, Any]]("/0/statements", ExecuteRequest("foo", Some("spark"))) { data =>
       data("id") should be (0)
       data("output") shouldBe 1
     }

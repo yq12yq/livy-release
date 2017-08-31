@@ -22,6 +22,7 @@ import java.io.ByteArrayOutputStream
 
 import scala.tools.nsc.interpreter.Results
 
+import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 import org.json4s.DefaultFormats
 import org.json4s.Extraction
@@ -29,6 +30,7 @@ import org.json4s.JsonAST._
 import org.json4s.JsonDSL._
 
 import com.cloudera.livy.Logging
+import com.cloudera.livy.rsc.driver.SparkEntries
 
 object AbstractSparkInterpreter {
   private[repl] val KEEP_NEWLINE_REGEX = """(?<=\n)""".r
@@ -42,6 +44,10 @@ abstract class AbstractSparkInterpreter extends Interpreter with Logging {
 
   protected val outputStream = new ByteArrayOutputStream()
 
+  protected var entries: SparkEntries = _
+
+  def sparkEntries(): SparkEntries = entries
+
   final def kind: String = "spark"
 
   protected def isStarted(): Boolean
@@ -50,12 +56,59 @@ abstract class AbstractSparkInterpreter extends Interpreter with Logging {
 
   protected def valueOfTerm(name: String): Option[Any]
 
-  override def execute(code: String): Interpreter.ExecuteResponse = restoreContextClassLoader {
-    require(isStarted())
+  protected def bind(name: String, tpe: String, value: Object, modifier: List[String]): Unit
 
-    executeLines(code.trim.split("\n").toList, Interpreter.ExecuteSuccess(JObject(
-      (TEXT_PLAIN, JString(""))
-    )))
+  protected def conf: SparkConf
+
+  protected def postStart(): Unit = {
+    entries = new SparkEntries(conf)
+
+    if (isSparkSessionPresent()) {
+      bind("spark",
+        sparkEntries.sparkSession().getClass.getCanonicalName,
+        sparkEntries.sparkSession(),
+        List("""@transient"""))
+      bind("sc", "org.apache.spark.SparkContext", sparkEntries.sc().sc, List("""@transient"""))
+
+      execute("import org.apache.spark.SparkContext._")
+      execute("import spark.implicits._")
+      execute("import spark.sql")
+      execute("import org.apache.spark.sql.functions._")
+    } else {
+      bind("sc", "org.apache.spark.SparkContext", sparkEntries.sc().sc, List("""@transient"""))
+      val sqlContext = Option(sparkEntries.hivectx()).getOrElse(sparkEntries.sqlctx())
+      bind("sqlContext", sqlContext.getClass.getCanonicalName, sqlContext, List("""@transient"""))
+
+      execute("import org.apache.spark.SparkContext._")
+      execute("import sqlContext.implicits._")
+      execute("import sqlContext.sql")
+      execute("import org.apache.spark.sql.functions._")
+    }
+  }
+
+  override def close(): Unit = {
+    if (entries != null) {
+      entries.stop()
+      entries = null
+    }
+  }
+
+  private def isSparkSessionPresent(): Boolean = {
+    try {
+      Class.forName("org.apache.spark.sql.SparkSession")
+      true
+    } catch {
+      case _: ClassNotFoundException | _: NoClassDefFoundError => false
+    }
+  }
+
+  override def execute(code: String): Interpreter.ExecuteResponse =
+    restoreContextClassLoader {
+      require(isStarted())
+
+      executeLines(code.trim.split("\n").toList, Interpreter.ExecuteSuccess(JObject(
+        (TEXT_PLAIN, JString(""))
+      )))
   }
 
   private def executeMagic(magic: String, rest: String): Interpreter.ExecuteResponse = {

@@ -21,18 +21,20 @@ package com.cloudera.livy.repl
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
+import scala.collection.JavaConverters._
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkConf, SparkContext}
 import org.json4s.jackson.JsonMethods.{compact, render}
 import org.json4s.DefaultFormats
 import org.json4s.JsonDSL._
 
 import com.cloudera.livy.Logging
 import com.cloudera.livy.rsc.RSCConf
-import com.cloudera.livy.rsc.driver.{Statement, StatementState}
+import com.cloudera.livy.rsc.driver.{SparkEntries, Statement, StatementState}
 import com.cloudera.livy.sessions._
 
 object Session {
@@ -48,7 +50,8 @@ object Session {
 
 class Session(
     livyConf: RSCConf,
-    interpreter: Interpreter,
+    sparkConf: SparkConf,
+    mockSparkInterpreter: Option[SparkInterpreter] = None,
     stateChangedCallback: SessionState => Unit = { _ => })
   extends Logging {
   import Session._
@@ -61,44 +64,90 @@ class Session(
 
   private implicit val formats = DefaultFormats
 
-  @volatile private[repl] var _sc: Option[SparkContext] = None
-
   private var _state: SessionState = SessionState.NotStarted()
   private val _statements = TrieMap[Int, Statement]()
 
   private val newStatementId = new AtomicInteger(0)
 
+  private val defaultInterpKind = Kind(livyConf.get(RSCConf.Entry.SESSION_KIND))
+
+  private val interpGroup = new mutable.HashMap[Kind, Interpreter]()
+
+  @volatile private var entries: SparkEntries = _
+
   stateChangedCallback(_state)
 
-  def start(): Future[SparkContext] = {
+  private def sc: SparkContext = {
+    require(entries != null)
+    entries.sc().sc
+  }
+
+  private[repl] def interpreter(kind: Kind): Interpreter = interpGroup.synchronized {
+    if (interpGroup.contains(kind)) {
+      interpGroup(kind)
+    } else {
+      require(entries != null,
+        "SparkEntries should not be null when lazily initialize other interpreters.")
+
+      val interp = kind match {
+        case Spark() =>
+          // This should never be touched here.
+          throw new IllegalStateException("SparkInterpreter should not be lazily created.")
+        case PySpark() => PythonInterpreter(sparkConf, entries)
+        case SparkR() => SparkRInterpreter(sparkConf, entries)
+      }
+      interp.start()
+      interpGroup(kind) = interp
+
+      interp
+    }
+  }
+
+  def start(): Future[SparkEntries] = {
     val future = Future {
       changeState(SessionState.Starting())
-      val sc = interpreter.start()
-      _sc = Option(sc)
+
+      // Always start SparkInterpreter after beginning, because we rely on SparkInterpreter to
+      // initialize SparkContext and create SparkEntries.
+      val sparkInterp = mockSparkInterpreter.getOrElse(new SparkInterpreter(sparkConf))
+      sparkInterp.start()
+
+      entries = sparkInterp.sparkEntries()
+      require(entries != null, "SparkEntries object should not be null in Spark Interpreter.")
+      interpGroup.synchronized {
+        interpGroup.put(Spark(), sparkInterp)
+      }
+
       changeState(SessionState.Idle())
-      sc
+      entries
     }
 
     future.onFailure { case _ => changeState(SessionState.Error()) }
     future
   }
 
-  def kind: String = interpreter.kind
-
   def state: SessionState = _state
 
   def statements: collection.Map[Int, Statement] = _statements.readOnlySnapshot()
 
-  def execute(code: String): Int = {
+  def execute(code: String, codeType: String = null): Int = {
+    val tpe = if (codeType != null) {
+      Kind(codeType)
+    } else if (defaultInterpKind != Shared()) {
+      defaultInterpKind
+    } else {
+      throw new IllegalArgumentException(s"Code type should be specified if session kind is shared")
+    }
+
     val statementId = newStatementId.getAndIncrement()
     _statements(statementId) = new Statement(statementId, StatementState.Waiting, null)
 
     Future {
-      setJobGroup(statementId)
+      setJobGroup(tpe, statementId)
       _statements(statementId).state.compareAndSet(StatementState.Waiting, StatementState.Running)
 
       val executeResult = if (_statements(statementId).state.get() == StatementState.Running) {
-        executeCode(statementId, code)
+        executeCode(interpreter(tpe), statementId, code)
       } else {
         null
       }
@@ -141,7 +190,7 @@ class Session(
             _statements(statementId).state.compareAndSet(
               StatementState.Cancelling, StatementState.Cancelled)
           } else {
-            _sc.foreach(_.cancelJobGroup(statementId.toString))
+            sc.cancelJobGroup(statementId.toString)
           }
           Thread.sleep(livyConf.getTimeAsMs(RSCConf.Entry.JOB_CANCEL_TRIGGER_INTERVAL))
         }
@@ -153,7 +202,7 @@ class Session(
 
   def close(): Unit = {
     executor.shutdown()
-    interpreter.close()
+    interpGroup.values.foreach(_.close())
   }
 
   private def changeState(newState: SessionState): Unit = {
@@ -163,7 +212,7 @@ class Session(
     stateChangedCallback(newState)
   }
 
-  private def executeCode(executionCount: Int, code: String): String = {
+  private def executeCode(interp: Interpreter, executionCount: Int, code: String): String = {
     changeState(SessionState.Busy())
 
     def transitToIdle() = {
@@ -174,7 +223,7 @@ class Session(
     }
 
     val resultInJson = try {
-      interpreter.execute(code) match {
+      interp.execute(code) match {
         case Interpreter.ExecuteSuccess(data) =>
           transitToIdle()
 
@@ -225,16 +274,17 @@ class Session(
     compact(render(resultInJson))
   }
 
-  private def setJobGroup(statementId: Int): String = {
-    val cmd = Kind(interpreter.kind) match {
+  private def setJobGroup(codeType: Kind, statementId: Int): String = {
+    val jobGroup = statementIdToJobGroup(statementId)
+    val cmd = codeType match {
       case Spark() =>
         // A dummy value to avoid automatic value binding in scala REPL.
         s"""val _livyJobGroup$statementId = sc.setJobGroup("$statementId",""" +
           s""""Job group for statement $statementId")"""
-      case PySpark() | PySpark3() =>
+      case PySpark() =>
         s"""sc.setJobGroup("$statementId", "Job group for statement $statementId")"""
       case SparkR() =>
-        interpreter.asInstanceOf[SparkRInterpreter].sparkMajorVersion match {
+        sc.getConf.get("spark.livy.spark_major_version", "1") match {
           case "1" =>
             s"""setJobGroup(sc, "$statementId", "Job group for statement $statementId", """ +
               "FALSE)"
@@ -243,6 +293,10 @@ class Session(
         }
     }
     // Set the job group
-    executeCode(statementId, cmd)
+    executeCode(interpreter(codeType), statementId, cmd)
+  }
+
+  private def statementIdToJobGroup(statementId: Int): String = {
+     statementId.toString
   }
 }

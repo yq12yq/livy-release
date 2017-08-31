@@ -24,7 +24,6 @@ import java.util.concurrent.locks.ReentrantLock
 import scala.concurrent.Promise
 import scala.io.Source
 
-import org.apache.spark.SparkContext
 import org.json4s.JValue
 
 import com.cloudera.livy.{Logging, Utils}
@@ -48,14 +47,8 @@ abstract class ProcessInterpreter(process: Process)
   protected[this] val stdin = new PrintWriter(process.getOutputStream)
   protected[this] val stdout = new BufferedReader(new InputStreamReader(process.getInputStream), 1)
 
-  override def start(): SparkContext = {
+  override def start(): Unit = {
     waitUntilReady()
-
-    if (ClientConf.TEST_MODE) {
-      null.asInstanceOf[SparkContext]
-    } else {
-      SparkContext.getOrCreate()
-    }
   }
 
   override def execute(code: String): Interpreter.ExecuteResponse = {

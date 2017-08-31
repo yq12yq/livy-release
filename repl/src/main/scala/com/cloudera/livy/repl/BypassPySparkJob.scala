@@ -20,16 +20,13 @@ package com.cloudera.livy.repl
 import java.nio.charset.StandardCharsets
 
 import com.cloudera.livy.{Job, JobContext}
+import com.cloudera.livy.sessions._
 
 class BypassPySparkJob(
     serializedJob: Array[Byte],
-    replDriver: ReplDriver) extends Job[Array[Byte]] {
+    pi: PythonInterpreter) extends Job[Array[Byte]] {
 
   override def call(jc: JobContext): Array[Byte] = {
-    val interpreter = replDriver.interpreter
-    require(interpreter != null && interpreter.isInstanceOf[PythonInterpreter])
-    val pi = interpreter.asInstanceOf[PythonInterpreter]
-
     val resultByteArray = pi.pysparkJobProcessor.processBypassJob(serializedJob)
     val resultString = new String(resultByteArray, StandardCharsets.UTF_8)
     if (resultString.startsWith("Client job error:")) {
