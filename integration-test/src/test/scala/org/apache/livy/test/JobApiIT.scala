@@ -293,6 +293,9 @@ class JobApiIT extends BaseIntegrationTestSuite with BeforeAndAfterAll with Logg
   }
 
   private def createClient(uri: String): LivyClient = {
-    new LivyClientBuilder().setURI(new URI(uri)).build()
+    new LivyClientBuilder()
+      .setURI(new URI(uri))
+      .setConf("spark.yarn.appMasterEnv.LIVY_TEST", sys.env.getOrElse("LIVY_TEST", "true"))
+      .build()
   }
 }
