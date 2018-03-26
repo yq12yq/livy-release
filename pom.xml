@@ -177,25 +177,6 @@
       </snapshots>
     </repository>
     <repository>
-      <id>cdh.repo</id>
-      <url>https://repository.cloudera.com/artifactory/cloudera-repos</url>
-      <name>Cloudera Repositories</name>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-    </repository>
-    <repository>
-      <id>cdh.snapshots.repo</id>
-      <url>https://repository.cloudera.com/artifactory/libs-snapshot-local</url>
-      <name>Cloudera Snapshots Repository</name>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-      <releases>
-        <enabled>false</enabled>
-      </releases>
-    </repository>
-    <repository>
       <id>repository.jboss.org</id>
       <url>http://repository.jboss.org/nexus/content/groups/public/</url>
       <snapshots>
@@ -1101,6 +1082,19 @@
       <activation>
         <property>
           <name>spark-2.2</name>
+        </property>
+      </activation>
+      <properties>
+        <spark.version>1.6.3.2.6.5.0-SNAPSHOT</spark.version>
+        <java.version>1.8</java.version>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>spark-2.3</id>
+      <activation>
+        <property>
+          <name>spark-2.3</name>
         </property>
       </activation>
       <properties>
