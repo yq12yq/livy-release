@@ -11,3 +11,4 @@ Backports
   LIVY-446      Livy to Support Spark 2.3
   LIVY-455      Fix json4s doesn't support java.math.BigDecimal issue
   LIVY-457      Fix SQLContext is not initialized correctly issue
+  LIVY-458      Upgrade jackson version to 2.9.5
