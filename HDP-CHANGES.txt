@@ -13,3 +13,4 @@ Backports
   LIVY-457      Fix SQLContext is not initialized correctly issue
   LIVY-458      Upgrade jackson version to 2.9.5
   LIVY-466      Fix RSCDriver exception during RPC shutdown
+  LIVY-472      Improve the logs for fail-to-create session
