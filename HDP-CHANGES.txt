@@ -16,3 +16,4 @@ Backports
   LIVY-472      Improve the logs for fail-to-create session
                 [Security] Update to support pyspark and sparkr changes in Spark 2.3.1
   LIVY-477      Upgrade Scala version to 2.11.12
+  LIVY-475      Support of Hadoop CredentialProvider API
