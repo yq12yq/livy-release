@@ -1022,6 +1022,8 @@
       </activation>
       <properties>
         <spark.version>1.6.3.2.6.2.0-SNAPSHOT</spark.version>
+        <py4j.version>0.10.7</py4j.version>
+        <json4s.version>3.2.11</json4s.version>
       </properties>
     </profile>
   </profiles>

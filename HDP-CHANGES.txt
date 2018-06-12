@@ -11,3 +11,4 @@ BUG FIXES
   LIVY-329      Fix two SSL issues.
   LIVY-358      Make JettyServer Http request and response header size configurable
   LIVY-358      [Follow-up] Add unit test to verify header size configurations
+                [Security] Update to support pyspark and sparkr changes in Spark 2.3.1
