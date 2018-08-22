@@ -23,7 +23,7 @@ import scala.concurrent.duration.Duration
 import io.netty.channel.ChannelHandlerContext
 import org.apache.spark.SparkConf
 
-import org.apache.livy.Logging
+import org.apache.livy.{EOLUtils, Logging}
 import org.apache.livy.client.common.ClientConf
 import org.apache.livy.rsc.{BaseProtocol, ReplJobResults, RSCConf}
 import org.apache.livy.rsc.BaseProtocol.ReplState
@@ -55,7 +55,7 @@ class ReplDriver(conf: SparkConf, livyConf: RSCConf)
   }
 
   def handle(ctx: ChannelHandlerContext, msg: BaseProtocol.ReplJobRequest): Int = {
-    session.execute(msg.code, msg.codeType)
+    session.execute(EOLUtils.convertToSystemEOL(msg.code), msg.codeType)
   }
 
   def handle(ctx: ChannelHandlerContext, msg: BaseProtocol.CancelReplJobRequest): Unit = {
