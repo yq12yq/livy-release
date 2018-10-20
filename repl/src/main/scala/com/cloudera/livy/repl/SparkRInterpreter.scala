@@ -25,8 +25,6 @@ import java.util.concurrent.{CountDownLatch, Semaphore, TimeUnit}
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.reflect.runtime.universe
-import scala.util.Try
-import scala.util.control.NonFatal
 
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.lang.StringEscapeUtils
@@ -36,14 +34,13 @@ import org.apache.spark.sql.SQLContext
 import org.json4s._
 import org.json4s.JsonDSL._
 
-import com.cloudera.livy.Logging
 import com.cloudera.livy.client.common.ClientConf
 import com.cloudera.livy.rsc.driver.SparkEntries
 
 private case class RequestResponse(content: String, error: Boolean)
 
 // scalastyle:off println
-object SparkRInterpreter extends Logging {
+object SparkRInterpreter {
   private val LIVY_END_MARKER = "----LIVY_END_OF_COMMAND----"
   private val PRINT_MARKER = f"""print("$LIVY_END_MARKER")"""
   private val EXPECTED_OUTPUT = f"""[1] "$LIVY_END_MARKER""""
@@ -79,25 +76,12 @@ object SparkRInterpreter extends Logging {
     val backendInstance = sparkRBackendClass.getDeclaredConstructor().newInstance()
 
     var sparkRBackendPort = 0
-    var sparkRBackendSecret: String = null
     val initialized = new Semaphore(0)
     // Launch a SparkR backend server for the R process to connect to
     val backendThread = new Thread("SparkR backend") {
       override def run(): Unit = {
-        try {
-          sparkRBackendPort = sparkRBackendClass.getMethod("init").invoke(backendInstance)
-            .asInstanceOf[Int]
-        } catch {
-          case NonFatal(e) =>
-            warn("Fail to init Spark RBackend, using different method signature", e)
-            val retTuple = sparkRBackendClass.getMethod("init").invoke(backendInstance)
-              .asInstanceOf[(Int, Object)]
-            sparkRBackendPort = retTuple._1
-            sparkRBackendSecret = Try {
-              val rAuthHelper = retTuple._2
-              rAuthHelper.getClass.getMethod("secret").invoke(rAuthHelper).asInstanceOf[String]
-            }.getOrElse(null)
-        }
+        sparkRBackendPort = sparkRBackendClass.getMethod("init").invoke(backendInstance)
+          .asInstanceOf[Int]
 
         initialized.release()
         sparkRBackendClass.getMethod("run").invoke(backendInstance)
@@ -130,9 +114,6 @@ object SparkRInterpreter extends Logging {
       val env = builder.environment()
       env.put("SPARK_HOME", sys.env.getOrElse("SPARK_HOME", "."))
       env.put("EXISTING_SPARKR_BACKEND_PORT", sparkRBackendPort.toString)
-      if (sparkRBackendSecret != null) {
-        env.put("SPARKR_BACKEND_AUTH_SECRET", sparkRBackendSecret)
-      }
       env.put("SPARKR_PACKAGE_DIR", packageDir)
       env.put("R_PROFILE_USER",
         Seq(packageDir, "SparkR", "profile", "general.R").mkString(File.separator))
@@ -140,7 +121,7 @@ object SparkRInterpreter extends Logging {
       builder.redirectErrorStream(true)
       val process = builder.start()
       new SparkRInterpreter(process, backendInstance, backendThread,
-        conf.getInt("spark.livy.spark_major_version", 1), sparkRBackendSecret != null)
+        conf.getInt("spark.livy.spark_major_version", 1))
     } catch {
       case e: Exception =>
         if (backendThread != null) {
@@ -166,12 +147,10 @@ object SparkRInterpreter extends Logging {
   }
 }
 
-class SparkRInterpreter(
-    process: Process,
+class SparkRInterpreter(process: Process,
     backendInstance: Any,
     backendThread: Thread,
-    val sparkMajorVersion: Int,
-    authProvided: Boolean)
+    val sparkMajorVersion: Int)
   extends ProcessInterpreter(process) {
   import SparkRInterpreter._
 
@@ -188,12 +167,7 @@ class SparkRInterpreter(
       // scalastyle:off line.size.limit
       sendRequest("library(SparkR)")
       sendRequest("""port <- Sys.getenv("EXISTING_SPARKR_BACKEND_PORT", "")""")
-      if (authProvided) {
-        sendRequest("""authSecret <- Sys.getenv("SPARKR_BACKEND_AUTH_SECRET", "")""")
-        sendRequest("""SparkR:::connectBackend("localhost", port, 6000, authSecret)""")
-      } else {
-        sendRequest("""SparkR:::connectBackend("localhost", port, 6000)""")
-      }
+      sendRequest("""SparkR:::connectBackend("localhost", port, 6000)""")
       sendRequest("""assign(".scStartTime", as.integer(Sys.time()), envir = SparkR:::.sparkREnv)""")
 
       sendRequest("""assign(".sc", SparkR:::callJStatic("com.cloudera.livy.repl.SparkRInterpreter", "getSparkContext"), envir = SparkR:::.sparkREnv)""")
