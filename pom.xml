@@ -20,7 +20,7 @@
 
   <groupId>org.apache.livy</groupId>
   <artifactId>livy-main</artifactId>
-  <version>0.4.0.2.6.5.0-SNAPSHOT</version>
+  <version>0.4.0.2.6.5.67-1</version>
   <packaging>pom</packaging>
   <name>Livy Project Parent POM</name>
   <description>Livy Project</description>
@@ -76,9 +76,9 @@
   </mailingLists>
 
   <properties>
-    <hadoop.version>2.7.3.2.6.5.0-SNAPSHOT</hadoop.version>
+    <hadoop.version>2.7.3.2.6.5.67-1</hadoop.version>
     <hadoop.scope>compile</hadoop.scope>
-    <spark.version>1.6.3.2.6.5.0-SNAPSHOT</spark.version>
+    <spark.version>1.6.3.2.6.5.67-1</spark.version>
     <commons-codec.version>1.9</commons-codec.version>
     <httpclient.version>4.5.2</httpclient.version>
     <httpcore.version>4.4.4</httpcore.version>
@@ -1049,7 +1049,7 @@
         </property>
       </activation>
       <properties>
-        <spark.version>1.6.3.2.6.5.0-SNAPSHOT</spark.version>
+        <spark.version>1.6.3.2.6.5.67-1</spark.version>
       </properties>
     </profile>
 
@@ -1061,7 +1061,7 @@
         </property>
       </activation>
       <properties>
-        <spark.version>1.6.3.2.6.5.0-SNAPSHOT</spark.version>
+        <spark.version>1.6.3.2.6.5.67-1</spark.version>
       </properties>
     </profile>
 
@@ -1073,7 +1073,7 @@
         </property>
       </activation>
       <properties>
-        <spark.version>1.6.3.2.6.5.0-SNAPSHOT</spark.version>
+        <spark.version>1.6.3.2.6.5.67-1</spark.version>
       </properties>
     </profile>
 
@@ -1085,7 +1085,7 @@
         </property>
       </activation>
       <properties>
-        <spark.version>1.6.3.2.6.5.0-SNAPSHOT</spark.version>
+        <spark.version>1.6.3.2.6.5.67-1</spark.version>
         <java.version>1.8</java.version>
       </properties>
     </profile>
@@ -1098,7 +1098,7 @@
         </property>
       </activation>
       <properties>
-        <spark.version>1.6.3.2.6.5.0-SNAPSHOT</spark.version>
+        <spark.version>1.6.3.2.6.5.67-1</spark.version>
         <java.version>1.8</java.version>
       </properties>
     </profile>
