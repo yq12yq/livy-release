@@ -1076,9 +1076,6 @@
     <!-- Spark version profile -->
     <profile>
       <id>spark-2.3</id>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-      </activation>
       <properties>
         <spark.scala-2.11.version>2.3.1</spark.scala-2.11.version>
         <spark.version>${spark.scala-2.11.version}</spark.version>
