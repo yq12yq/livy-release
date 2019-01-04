@@ -15,14 +15,12 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.apache.livy</groupId>
   <artifactId>livy-main</artifactId>
-  <version>0.5.1-incubating-SNAPSHOT</version>
+  <version>0.5.0.3.0.1.6-4</version>
   <packaging>pom</packaging>
   <name>Livy Project Parent POM</name>
   <description>Livy Project</description>
@@ -78,12 +76,12 @@
   </mailingLists>
 
   <properties>
-    <hadoop.version>2.7.3</hadoop.version>
+    <hadoop.version>3.1.1.3.0.1.6-4</hadoop.version>
     <hadoop.scope>compile</hadoop.scope>
     <spark.scala-2.11.version>2.2.0</spark.scala-2.11.version>
     <spark.scala-2.10.version>2.2.0</spark.scala-2.10.version>
-    <spark1.version>1.6.2</spark1.version>
-    <spark.version>${spark.scala-2.11.version}</spark.version>
+    <spark1.version>1.6.3.2.6.3.0-235</spark1.version>
+    <spark.version>2.3.1.3.0.1.6-4</spark.version>
     <commons-codec.version>1.9</commons-codec.version>
     <guava.version>15.0</guava.version>
     <httpclient.version>4.5.3</httpclient.version>
@@ -137,7 +135,7 @@
     -->
     <skipDeploy>false</skipDeploy>
 
-    <asf.copyright.header><![CDATA[/*
+    <asf.copyright.header>/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -152,7 +150,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */]]></asf.copyright.header>
+ */</asf.copyright.header>
 
     <copyright.header>${asf.copyright.header}</copyright.header>
 
@@ -903,18 +901,11 @@
             </goals>
             <configuration>
               <target>
-                <copy file="${execution.root}/scalastyle.xml"
-                  tofile="${project.build.directory}/scalastyle.xml" />
-                <replace file="${project.build.directory}/scalastyle.xml"
-                  token="{{COPYRIGHT_HEADER}}"
-                  value="${copyright.header}" />
-                <copy file="${execution.root}/checkstyle.xml"
-                  tofile="${project.build.directory}/checkstyle.xml" />
-                <echo file="${project.build.directory}/checkstyle.header"
-                  message="${copyright.header}" />
-                <replace file="${project.build.directory}/checkstyle.xml"
-                  token="{{HEADER_FILE}}"
-                  value="${project.build.directory}/checkstyle.header" />
+                <copy file="${execution.root}/scalastyle.xml" tofile="${project.build.directory}/scalastyle.xml" />
+                <replace file="${project.build.directory}/scalastyle.xml" token="{{COPYRIGHT_HEADER}}" value="${copyright.header}" />
+                <copy file="${execution.root}/checkstyle.xml" tofile="${project.build.directory}/checkstyle.xml" />
+                <echo file="${project.build.directory}/checkstyle.header" message="${copyright.header}" />
+                <replace file="${project.build.directory}/checkstyle.xml" token="{{HEADER_FILE}}" value="${project.build.directory}/checkstyle.header" />
               </target>
             </configuration>
           </execution>
@@ -1087,7 +1078,7 @@
         </property>
       </activation>
       <properties>
-        <spark.version>1.6.2</spark.version>
+        <spark.version>2.3.1.3.0.1.6-4</spark.version>
       </properties>
     </profile>
 
@@ -1101,7 +1092,7 @@
       <properties>
         <spark.scala-2.11.version>2.0.1</spark.scala-2.11.version>
         <spark.scala-2.10.version>2.0.1</spark.scala-2.10.version>
-        <spark.version>${spark.scala-2.11.version}</spark.version>
+        <spark.version>2.3.1.3.0.1.6-4</spark.version>
         <py4j.version>0.10.3</py4j.version>
         <json4s.version>3.2.11</json4s.version>
         <spark.bin.download.url>
@@ -1136,7 +1127,7 @@
       <properties>
         <spark.scala-2.11.version>2.1.0</spark.scala-2.11.version>
         <spark.scala-2.10.version>2.1.0</spark.scala-2.10.version>
-        <spark.version>${spark.scala-2.11.version}</spark.version>
+        <spark.version>2.3.1.3.0.1.6-4</spark.version>
         <py4j.version>0.10.4</py4j.version>
         <json4s.version>3.2.11</json4s.version>
       </properties>
@@ -1167,7 +1158,7 @@
       <properties>
         <spark.scala-2.11.version>2.2.0</spark.scala-2.11.version>
         <spark.scala-2.10.version>2.2.0</spark.scala-2.10.version>
-        <spark.version>${spark.scala-2.11.version}</spark.version>
+        <spark.version>2.3.1.3.0.1.6-4</spark.version>
         <java.version>1.8</java.version>
         <py4j.version>0.10.4</py4j.version>
         <json4s.version>3.2.11</json4s.version>
@@ -1199,7 +1190,7 @@
       <properties>
         <spark.scala-2.11.version>2.3.1</spark.scala-2.11.version>
         <spark.scala-2.10.version>2.2.0</spark.scala-2.10.version>
-        <spark.version>${spark.scala-2.11.version}</spark.version>
+        <spark.version>2.3.1.3.0.1.6-4</spark.version>
         <netty.spark-2.11.version>4.1.17.Final</netty.spark-2.11.version>
         <netty.spark-2.10.version>4.0.37.Final</netty.spark-2.10.version>
         <java.version>1.8</java.version>
